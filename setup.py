@@ -1,9 +1,24 @@
 #!/usr/bin/env python
+from setuptools import setup, find_packages
+import os
+import sys
 
-from setuptools import find_packages, setup
+version = '0.0.3'
 
-with open("README.md", "r") as fh:
-    long_description = fh.read()
+long_description = "\n".join([
+    open('README.md', 'r').read(),
+])
+
+if sys.argv[-1] == 'publish':
+    os.system('python setup.py sdist bdist_wheel')
+    os.system('twine upload dist/*')
+    sys.exit()
+
+if sys.argv[-1] == 'tag':
+    os.system("git tag -a %s -m 'version %s'" % (version, version))
+    os.system("git push --tags")
+    sys.exit()
+
 
 setup(
     name='django-ueditor',
@@ -12,12 +27,13 @@ setup(
     ),
     long_description=long_description,
     long_description_content_type="text/markdown",
-    version='0.0.1',
+    keywords='django wysiwyg editor widget ueditor',
+    version=version,
     author='Peter Han',
     author_email='peter@qitian.com',
     url='https://www.qitian.biz/',
     license='MIT License',
-    packages=find_packages(exclude=['tests', 'tests.*']),
+    packages=find_packages(exclude=['test_ueditor']),
     include_package_data=True,
     install_requires=[
         'django>=2.0'
@@ -39,4 +55,5 @@ setup(
         "Programming Language :: Python :: Implementation :: PyPy",
         'Topic :: Utilities',
     ],
+    zip_safe=False,
 )

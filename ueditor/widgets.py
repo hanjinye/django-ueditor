@@ -20,6 +20,7 @@ from django.utils.encoding import smart_text
 from django.utils.safestring import mark_safe
 from django.utils.translation import get_language, get_language_bidi
 from django.template.loader import render_to_string
+from django.urls import reverse
 from django.contrib.admin import widgets as admin_widgets
 from . import settings as qtue_settings
 
@@ -170,6 +171,8 @@ class UEditor(Textarea):
         if value is None:
             value = ''
         value = smart_text(value)
+        qtue_settings = self.profile.copy()
+        qtue_settings.update(self.ue_attrs)
         ue_html = """<script id="{name}" name="{name}" type="text/plain">
                                             </script>
                                             <textarea id="{name}_val" style="display:none;" >{value}</textarea>
