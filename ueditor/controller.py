@@ -7,6 +7,9 @@ import os, codecs
 import json
 import random
 import re
+from urllib import parse, request as url_request
+import shortuuid
+from qiniu import Auth, put_file
 
 config_path = os.path.join(os.path.dirname(__file__), "ueconfig.json")
 base_dir = settings.BASE_DIR  # 项目的根目录
@@ -146,6 +149,88 @@ def uploadFile(request, config):
             return HttpResponse(buildJsonResult(result))
 
 
+@csrf_exempt
+def catcher_remote_image(request):
+    """远程抓图，当catchRemoteImageEnable:true时，
+        如果前端插入图片地址与当前web不在同一个域，则由本函数从远程下载图片到本地
+    """
+    if not request.method == "POST":
+        return HttpResponse(json.dumps("{'state:'ERROR'}"), content_type="application/javascript")
+
+    state = "SUCCESS"
+
+    allow_type = list(request.GET.get("catcherAllowFiles", GetConfigValue("imageAllowFiles")))
+    max_size = int(request.GET.get("catcherMaxSize", GetConfigValue("imageMaxSize")))
+
+    remote_urls = request.POST.getlist("source[]", [])
+    catcher_infos = []
+    path_format_var = get_path_format_vars()
+
+    for remote_url in remote_urls:
+        # 取得上传的文件的原始名称
+        url_obj = parse.urlparse(remote_url)
+        remote_file_name = os.path.basename(url_obj.path)
+        remote_original_name, remote_original_ext = os.path.splitext(remote_file_name)
+        # 文件类型检验
+        if remote_original_ext in allow_type:
+            path_format_var.update({
+                "basename": remote_original_name,
+                "extname": remote_original_ext[1:],
+                "filename": remote_original_name
+            })
+            # 计算保存的文件名
+            dir_name = 'article/' + datetime.now().strftime('%Y%m%d') + '/'
+            full_dir = os.path.join(settings.MEDIA_ROOT, dir_name)
+            if not os.path.exists(full_dir):
+                os.makedirs(full_dir)
+            file_name = shortuuid.uuid() + remote_original_ext
+            file_path = os.path.join(full_dir, file_name)
+            # 读取远程图片文件
+            try:
+                url_request.urlretrieve(remote_url,file_path)
+                ret, info = upload_qiniu(file_path, file_name)
+                image_url = settings.QINIU_URL + ret['key']
+            except Exception as e:
+                state = "抓取图片错误: %s" % str(e)
+
+            catcher_infos.append({
+                "state": state,
+                "url": image_url,
+                "size": os.path.getsize(file_path),
+                "title": os.path.basename(file_path),
+                "original": remote_file_name,
+                "source": remote_url
+            })
+
+    return_info = {
+        "state": "SUCCESS" if len(catcher_infos) > 0 else "ERROR",
+        "list": catcher_infos
+    }
+
+    return HttpResponse(json.dumps(return_info, ensure_ascii=False), content_type="application/javascript")
+
+
+def get_path_format_vars():
+    return {
+        "year": datetime.now().strftime("%Y"),
+        "month": datetime.now().strftime("%m"),
+        "day": datetime.now().strftime("%d"),
+        "date": datetime.now().strftime("%Y%m%d"),
+        "time": datetime.now().strftime("%H%M%S"),
+        "datetime": datetime.now().strftime("%Y%m%d%H%M%S"),
+        "rnd": random.randrange(100, 999)
+    }
+
+
+def upload_qiniu(local_url, file_name, bucket_name=settings.QINIU_BUCKET):
+    qiniu = Auth(settings.QINIU_ACCESS_KEY, settings.QINIU_SECRET_KEY)
+    upload_folder = os.path.join(settings.QINIU_FOLDER, datetime.now().strftime('%Y%m%d'))
+    upload_name = upload_folder + file_name
+    token = qiniu.upload_token(bucket_name, upload_name, 3600)
+    ret, info = put_file(token, upload_name, local_url)
+    return ret, info
+
+
 # 加水印
 def add_watermark(savePath):
     try:
@@ -280,7 +365,8 @@ actions = {
     "uploadvideo": uploadvideoHandler,
     "uploadfile": uploadfileHandler,
     "listimage": listimageHandler,
-    "listfile": ListFileManagerHander
+    "listfile": ListFileManagerHander,
+    "catchimage": catcher_remote_image,
 }
 
 

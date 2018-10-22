@@ -32,7 +32,7 @@
   "catcherActionName": "catchimage",
   "catcherFieldName": "source",
   "catcherPathFormat": "/images/upload/image/{yyyy}{mm}{dd}/{time}{rand:6}",
-  "catcherUrlPrefix": "/media/upload/images/",
+  "catcherUrlPrefix": "",
   "catcherMaxSize": 10485760,
   "catcherAllowFiles": [
     ".png",
