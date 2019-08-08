@@ -154,6 +154,7 @@ def catcher_remote_image(request):
     """远程抓图，当catchRemoteImageEnable:true时，
         如果前端插入图片地址与当前web不在同一个域，则由本函数从远程下载图片到本地
     """
+    return False
     if not request.method == "POST":
         return HttpResponse(json.dumps("{'state:'ERROR'}"), content_type="application/javascript")
 
@@ -224,7 +225,7 @@ def get_path_format_vars():
 
 def upload_qiniu(local_url, file_name, bucket_name=settings.QINIU_BUCKET):
     qiniu = Auth(settings.QINIU_ACCESS_KEY, settings.QINIU_SECRET_KEY)
-    upload_folder = os.path.join(settings.QINIU_FOLDER, datetime.now().strftime('%Y%m%d'))
+    upload_folder = os.path.join(settings.QINIU_FOLDER, datetime.now().strftime('%Y%m%d')+'/')
     upload_name = upload_folder + file_name
     token = qiniu.upload_token(bucket_name, upload_name, 3600)
     ret, info = put_file(token, upload_name, local_url)

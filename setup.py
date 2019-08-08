@@ -3,13 +3,23 @@ from setuptools import setup, find_packages
 import os
 import sys
 
-version = '1.0.0'
+version = '1.0.2'
 
 long_description = "\n".join([
     open('README.md', 'r').read(),
 ])
 
+if sys.argv[-1] == 'build':
+    os.system('rm -rf build dist *.egg-info')
+    os.system('python setup.py sdist bdist_wheel')
+    sys.exit()
+
+if sys.argv[-1] == 'clear':
+    os.system('rm -rf build dist *.egg-info django.log')
+    sys.exit()
+
 if sys.argv[-1] == 'publish':
+    os.system('rm -rf build dist *.egg-info django.log')
     os.system('python setup.py sdist bdist_wheel')
     os.system('twine upload dist/*')
     sys.exit()
